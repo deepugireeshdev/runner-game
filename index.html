@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Runner Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(to bottom right, #a78bfa, #f472b6, #ef4444);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+    }
+    #game-container {
+      width: 100%;
+      max-width: 520px;
+      height: 100%;
+      max-height: 800px;
+      background: linear-gradient(180deg,rgba(73, 163, 202, 1) 0%, rgba(73, 163, 202, 1) 25%, rgba(123, 85, 46, 1) 60%, rgba(123, 85, 46, 1) 100%);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0,0,0,0.6);
+      aspect-ratio: 13/20;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <script>
+    class SplashScene extends Phaser.Scene {
+      constructor() {
+        super('SplashScene');
+      }
+
+      preload() {
+        // Runner
+        // Using sprites
+        this.load.spritesheet('runner', './assets/animation/running-sprite.png', {
+            frameWidth: 100,
+            frameHeight: 150
+        });
+
+        // Obstacle
+        this.load.image('friedchicken', './assets/obstacles/fried-chicken.png');
+        this.load.image('frenchfries', './assets/obstacles/french-fries.png');
+        this.load.image('burger', './assets/obstacles/burger.png');
+
+        // Collectables
+        this.load.image('apple', './assets/collectables/apple.png');
+        this.load.image('blueberry', './assets/collectables/blue-berry.png');
+        this.load.image('banana', './assets/collectables/banana.png');
+        this.load.image('healthdrink', './assets/collectables/health-drink.png')
+
+        // Background 1
+        const bgCanvas = document.createElement('canvas');
+        bgCanvas.width = 520;
+        bgCanvas.height = 800;
+        const bgCtx = bgCanvas.getContext('2d');
+        const gradient = bgCtx.createLinearGradient(0, 0, 0, 800);
+        gradient.addColorStop(0, '#48A3CA');
+        gradient.addColorStop(1, '#86CFE1');
+        bgCtx.fillStyle = gradient;
+        bgCtx.fillRect(0, 0, 520, 800);
+        this.textures.addCanvas('background1', bgCanvas);
+
+        // Background 2
+        this.load.image('background2', './assets/background/game-scene/bg-1.png');
+
+        // Background 3
+        this.load.image('background3', './assets/background/game-scene/bg-2.png');
+
+        // Splash Screen Background
+        this.load.image('splash-screen', './assets/background/splash-screen.jpg');
+
+        // Instruction Background 
+        this.load.image('instruction', './assets/background/instruction.jpg');
+
+        // Game Over Background 
+        this.load.image('game-over', './assets/background/game-over.jpg');
+
+        // Ground 
+        this.load.image('ground', './assets/background/game-scene/ground.png');
+
+        // User Interface
+        this.load.image('startbtn', './assets/ui/start-btn.png');
+        this.load.image('instructiontext', './assets/ui/instructions.png');
+        this.load.image('finalscore', './assets/ui/final-score.png');
+        this.load.image('restartbtn', './assets/ui/restart-btn.png');
+        this.load.image('homebtn', './assets/ui/home-btn.png');
+        this.load.image('muteIcon', './assets/ui/mute.png');
+        this.load.image('unmuteIcon', './assets/ui/unmute.png');
+        this.load.image('lifebg', './assets/ui/life.png');
+        this.load.image('scorebg', './assets/ui/score.png');
+
+        // Music
+        this.load.audio('bgMusic', './assets/music/bgm.mp3');
+        this.load.audio('jumpSound', './assets/music/jump.mp3');
+        this.load.audio('coinSound', './assets/music/collect.mp3');
+        this.load.audio('hitSound', './assets/music/hit.mp3');
+
+      }
+
+      create() {
+        this.add.image(260, 400, 'splash-screen');
+        // this.add.text(260, 300, 'RUNNER GAME', { fontSize: '48px', color: '#fff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+        // this.add.text(260, 400, 'Loading...', { fontSize: '24px', color: '#fff' }).setOrigin(0.5);
+        this.time.delayedCall(1000, () => this.scene.start('InstructionsScene'));
+      }
+    }
+
+    class InstructionsScene extends Phaser.Scene {
+      constructor() {
+        super('InstructionsScene');
+      }
+
+      create() {
+        this.add.image(260, 400, 'instruction');
+        this.add.image(260, 250, 'instructiontext');
+
+        // const startBtn = this.add.rectangle(260, 600, 200, 60, 0x4CAF50).setInteractive();
+        const startBtn = this.add.image(260, 500, 'startbtn').setInteractive();
+
+        startBtn.on('pointerdown', () => this.scene.start('GameScene'));
+        startBtn.on('pointerover', () => startBtn.setFillStyle(0x45a049));
+        startBtn.on('pointerout', () => startBtn.setFillStyle(0x4CAF50));
+      }
+    }
+
+    class GameScene extends Phaser.Scene {
+      constructor() {
+        super('GameScene');
+      }
+
+      create() {
+        this.score = 0;
+        this.lives = 3;
+        this.gameSpeed = 200;
+        this.isGameOver = false;
+
+        // Load sounds
+        this.bgMusic = this.sound.add('bgMusic', { loop: true, volume: 0.5 });
+        this.jumpSound = this.sound.add('jumpSound');
+        this.coinSound = this.sound.add('coinSound');
+        this.hitSound = this.sound.add('hitSound');
+
+        this.bgMusic.play();
+
+        this.isMuted = false;
+        this.muteButton = this.add.text(this.scale.width - 20, 20, '🔊', {
+          fontSize: '48px',
+          color: '#fff',
+          fontFamily: 'Arial',
+          stroke: '#000',
+          strokeThickness: 2
+        }).setOrigin(1, 0).setInteractive().on('pointerdown', () => {
+          this.isMuted = !this.isMuted;
+          this.sound.mute = this.isMuted;
+          this.muteButton.setText(this.isMuted ? '🔇' : '🔊');
+        });
+
+        this.collectibleTypes = ['apple', 'blueberry', 'banana', 'healthdrink'];
+        this.collectibleData = {
+            apple: { points: 10 },
+            blueberry: { points: 10 },
+            banana: { points: 10 },
+            healthdrink: {points: 20}
+        };
+
+        this.obstacleTypes = ['friedchicken', 'frenchfries', 'burger'];
+
+        this.bg1 = this.add.tileSprite(260, 400, 520, 800, 'background1');
+        this.bg2 = this.add.tileSprite(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 'background2');
+        this.bg3 = this.add.tileSprite(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 'background3');
+        this.ground = this.add.tileSprite(this.scale.width / 2, 700, this.scale.width, 200, 'ground');
+        this.ground.setDisplaySize(this.scale.width, 200); // Resize to match original rectangle
+        this.ground.setPosition(this.scale.width / 2, 700); // y = 800 - 100
+        this.physics.add.existing(this.ground, true); // Make it static
+
+        this.anims.create({
+            key: 'run',
+            frames: this.anims.generateFrameNumbers('runner', { start: 0, end: 5 }),
+            frameRate: 10,
+            repeat: -1
+        });
+        this.player = this.physics.add.sprite(100, 650, 'runner').setCollideWorldBounds(true);
+        this.player.play('run');
+        this.player.body.setSize(24, 40);
+        this.player.setPosition(100, 550); // move up a bit
+        this.physics.add.collider(this.player, this.ground);
+
+        this.obstacles = this.physics.add.group();
+        this.coins = this.physics.add.group();
+
+        this.scoreBg = this.add.image(100, 62, 'scorebg')
+          .setOrigin(0.5)
+          .setDisplaySize(125, 78);
+        this.livesBg = this.add.image(100, 162, 'lifebg')
+          .setOrigin(0.5)
+          .setDisplaySize(125, 78);
+        this.scoreText = this.add.text(105, 42, '0', { fontSize: '24px', color: '#fff', stroke: '#fff', strokeThickness: 4 });
+        this.livesText = this.add.text(105, 142, '3', { fontSize: '24px', color: '#fff', stroke: '#fff', strokeThickness: 4 });
+
+        this.input.on('pointerdown', this.jump, this);
+        this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+        this.obstacleTimer = this.time.addEvent({ delay: 2000, callback: this.spawnObstacle, callbackScope: this, loop: true });
+        this.coinTimer = this.time.addEvent({ delay: 1500, callback: this.spawnCollectible, callbackScope: this, loop: true });
+        this.speedTimer = this.time.addEvent({ delay: 10000, callback: () => { this.gameSpeed += 20; }, loop: true });
+
+        this.physics.add.overlap(this.player, this.obstacles, this.hitObstacle, null, this);
+        // this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
+        this.physics.add.overlap(this.player, this.coins, this.collectItem, undefined, this);
+      }
+
+      update() {
+        if (this.isGameOver) return;
+
+        this.bg2.tilePositionX += 2;
+        this.bg3.tilePositionX += 4;
+
+        if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.jump();
+
+        this.obstacles.getChildren().forEach(o => { if (o.x < -50) o.destroy(); });
+        this.coins.getChildren().forEach(c => {
+        //   c.rotation += 0.1;
+          if (c.x < -50) c.destroy();
+        });
+      }
+
+      jump() {
+        if (this.player.body.touching.down){
+          this.player.setVelocityY(-500);
+          this.jumpSound.play();
+        } 
+      }
+
+      spawnObstacle() {
+        if (this.isGameOver) return;
+        const obstacleY = 615;
+        const type = Phaser.Utils.Array.GetRandom(this.obstacleTypes);
+        const obs = this.obstacles.create(570, obstacleY, type);
+        obs.setVelocityX(-this.gameSpeed);
+        obs.setGravityY(-800);
+        obs.body.setSize(60, 60);
+      }
+
+    //   spawnCoin() {
+    //     if (this.isGameOver) return;
+    //     const y = Phaser.Math.Between(500, 650);
+    //     const coin = this.coins.create(570, y, 'coin');
+    //     coin.setVelocityX(-this.gameSpeed);
+    //     coin.setGravityY(-800);
+    //     coin.body.setSize(20, 20);
+    //   }
+
+      spawnCollectible() {
+            if (this.isGameOver) return;
+
+            // Choose random type
+            const type = Phaser.Utils.Array.GetRandom(this.collectibleTypes);
+
+            // Random Y position
+            const y = Phaser.Math.Between(400, 580);
+
+            // Create collectible
+            const collectible = this.coins.create(570, y, type);
+            collectible.setVelocityX(-this.gameSpeed);
+            collectible.setGravityY(-800);
+            collectible.body.setSize(50, 45);
+
+            // Tag it with a custom property to track what kind it is
+            collectible.collectibleType = type;
+        }
+
+      hitObstacle(player, obstacle) {
+        this.hitSound.play();
+        obstacle.destroy();
+        this.lives--;
+        this.livesText.setText(this.lives);
+        this.cameras.main.shake(200, 0.02);
+        this.player.setTint(0xff0000);
+        this.time.delayedCall(200, () => this.player.clearTint());
+        if (this.lives <= 0) this.gameOver();
+      }
+
+    //   collectCoin(player, coin) {
+    //     coin.destroy();
+    //     this.score += 10;
+    //     this.scoreText.setText('Score: ' + this.score);
+    //     const text = this.add.text(coin.x, coin.y, '+10', { fontSize: '18px', color: '#FFD700' });
+    //     this.tweens.add({ targets: text, y: text.y - 50, alpha: 0, duration: 800, onComplete: () => text.destroy() });
+    //   }
+
+    collectItem(player, item) {
+        const sprite = item; // no type casting
+        this.coinSound.play();
+        const type = sprite.collectibleType || 'coin';
+        const points = this.collectibleData[type]?.points || 0;
+
+        this.score += points;
+        this.scoreText.setText(this.score);
+
+        const text = this.add.text(sprite.x, sprite.y, `+${points}`, {
+            fontSize: '18px',
+            color: '#FFD700',
+            fontFamily: 'Arial'
+        });
+
+        this.tweens.add({
+            targets: text,
+            y: text.y - 50,
+            alpha: 0,
+            duration: 800,
+            onComplete: () => text.destroy()
+        });
+
+        sprite.destroy();
+    }
+
+      gameOver() {
+        this.isGameOver = true;
+        this.bgMusic.stop();
+        this.obstacleTimer.remove();
+        this.coinTimer.remove();
+        this.speedTimer.remove();
+        this.time.delayedCall(1000, () => this.scene.start('GameOverScene', { score: this.score }));
+      }
+    }
+
+    class GameOverScene extends Phaser.Scene {
+        constructor() {
+            super('GameOverScene'); // This key must match when starting the scene
+        }
+      init(data) {
+        this.finalScore = data.score || 0;
+      }
+
+      create() {
+        this.add.image(260, 400, 'game-over');
+        this.add.image(260, 350, 'finalscore');
+        this.add.text(260, 375, this.finalScore.toString(), { fontSize: '42px', color: '#FFF', stroke: '#124933', strokeThickness: 3 }).setOrigin(0.5);
+
+        const restartBtn = this.add.image(260, 500, 'restartbtn').setInteractive();
+        // this.add.text(260, 500, 'RESTART GAME', { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
+
+        const menuBtn = this.add.image(260, 580, 'homebtn').setInteractive();
+        // this.add.text(260, 580, 'MAIN MENU', { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
+
+        restartBtn.on('pointerdown', () => this.scene.start('GameScene'));
+        menuBtn.on('pointerdown', () => {
+          this.scene.start('InstructionsScene')
+        });
+        restartBtn.on('pointerover', () => restartBtn.setFillStyle(0x45a049));
+        restartBtn.on('pointerout', () => restartBtn.setFillStyle(0x4CAF50));
+        menuBtn.on('pointerover', () => menuBtn.setFillStyle(0x1976D2));
+        menuBtn.on('pointerout', () => menuBtn.setFillStyle(0x2196F3));
+      }
+    }
+
+    const config = {
+      type: Phaser.AUTO,
+      width: 520,
+      height: 800,
+      parent: 'game-container',
+      physics: { default: 'arcade', arcade: { gravity: { y: 800 }, debug: false } },
+      scene: [SplashScene, InstructionsScene, GameScene, GameOverScene],
+      scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
+    };
+
+    new Phaser.Game(config);
+  </script>
+</body>
+</html>
