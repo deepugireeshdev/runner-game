@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>SuperSip Quest</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
   <meta property="og:title" content="Runner Game - SuperSip Quest" />
   <meta property="og:description" content="Play this exciting SuperSip Quest game and beat your high score!" />
   <meta property="og:image" content="https://raw.githubusercontent.com/deepugireeshdev/runner-game/refs/heads/main/assets/og-image.jpg" />
@@ -24,11 +25,16 @@
       max-width: 520px;
       height: 100%;
       max-height: 800px;
-      background: linear-gradient(180deg,rgba(73, 163, 202, 1) 0%, rgba(73, 163, 202, 1) 25%, rgba(123, 85, 46, 1) 60%, rgba(123, 85, 46, 1) 100%);
+      background: linear-gradient(180deg,rgba(73, 163, 202, 1) 0%, rgba(73, 163, 202, 1) 25%, rgba(123, 85, 46, 1) 60%, rgba(123, 85, 46, 1) 100%) !important;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 0 30px rgba(0,0,0,0.6);
       aspect-ratio: 13/20;
+    }
+    @media (prefers-color-scheme: dark) {
+      #game-container {
+        background: linear-gradient(180deg,rgba(73, 163, 202, 1) 0%, rgba(73, 163, 202, 1) 25%, rgba(123, 85, 46, 1) 60%, rgba(123, 85, 46, 1) 100%) !important;
+      }
     }
   </style>
 </head>
@@ -74,6 +80,9 @@
 
         // Background 2
         this.load.image('background2', './assets/background/game-scene/bg-1.png');
+
+        //BillBoard
+        this.load.image('billboard', './assets/background/game-scene/billboard.png')
 
         // Background 3
         this.load.image('background3', './assets/background/game-scene/bg-2.png');
@@ -179,6 +188,7 @@
 
         this.bg1 = this.add.tileSprite(260, 400, 520, 800, 'background1');
         this.bg2 = this.add.tileSprite(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 'background2');
+        this.billbg = this.add.tileSprite(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 'billboard');
         this.bg3 = this.add.tileSprite(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 'background3');
         this.ground = this.add.tileSprite(this.scale.width / 2, 700, this.scale.width, 200, 'ground');
         this.ground.setDisplaySize(this.scale.width, 200); // Resize to match original rectangle
@@ -224,7 +234,8 @@
       update() {
         if (this.isGameOver) return;
 
-        this.bg2.tilePositionX += 2;
+        this.bg2.tilePositionX += 1;
+        this.billbg.tilePositionX +=2
         this.bg3.tilePositionX += 4;
 
         if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.jump();
